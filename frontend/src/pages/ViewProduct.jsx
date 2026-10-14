@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { addToCart } from '../redux/userSlice';
+import { addToCart,removeFromCart } from '../redux/userSlice';
 import styled from 'styled-components';
 import { BasicButton } from '../utils/buttonStyles';
 import { getProductDetails, updateStuff } from '../redux/userHandle';
-import { Avatar, Card, IconButton, Menu, MenuItem, Typography } from '@mui/material';
+import { Avatar, Button,Card, IconButton, Menu, MenuItem, Typography } from '@mui/material';
 import { generateRandomColor, timeAgo } from '../utils/helperFunctions';
 import { MoreVert } from '@mui/icons-material';
+
 
 const ViewProduct = () => {
     const dispatch = useDispatch();
@@ -39,6 +40,8 @@ const ViewProduct = () => {
     };
 
     const reviewer = currentUser && currentUser._id
+    const cartItem = currentUser && currentUser.cartDetails &&
+    currentUser.cartDetails.find((item) => item._id === productID);
 
     return (
         <>
@@ -69,17 +72,33 @@ const ViewProduct = () => {
                                 </ProductContainer>
 
                                 {
-                                    currentRole === "Customer" &&
-                                    <>
-                                        <ButtonContainer>
-                                            <BasicButton
-                                                onClick={() => dispatch(addToCart(productDetails))}
-                                            >
-                                                Add to Cart
-                                            </BasicButton>
-                                        </ButtonContainer>
-                                    </>
-                                }
+    currentRole === "Customer" &&
+    <ButtonContainer>
+        {cartItem ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => dispatch(removeFromCart(productDetails))}
+                >
+                    -1
+                </Button>
+                <Typography variant="h6">{cartItem.quantity}</Typography>
+                <Button
+                    variant="outlined"
+                    color="success"
+                    onClick={() => dispatch(addToCart(productDetails))}
+                >
+                    +1
+                </Button>
+            </div>
+        ) : (
+            <BasicButton onClick={() => dispatch(addToCart(productDetails))}>
+                Add to Cart
+            </BasicButton>
+        )}
+    </ButtonContainer>
+}
                                 <ReviewWritingContainer>
                                     <Typography variant="h4">Reviews</Typography>
                                 </ReviewWritingContainer>

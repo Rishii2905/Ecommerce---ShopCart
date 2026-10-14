@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const Customer = require('../models/customerSchema.js');
 const { createNewToken } = require('../utils/token.js');
 

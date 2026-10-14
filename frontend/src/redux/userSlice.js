@@ -87,14 +87,14 @@ const userSlice = createSlice({
             const existingProduct = state.currentUser.cartDetails.find(
                 (cartItem) => cartItem._id === action.payload._id
             );
-
+        
             if (existingProduct) {
                 existingProduct.quantity += 1;
             } else {
-                const newCartItem = { ...action.payload };
+                const newCartItem = { ...action.payload, quantity: 1 };
                 state.currentUser.cartDetails.push(newCartItem);
             }
-
+        
             updateCartDetailsInLocalStorage(state.currentUser.cartDetails);
         },
         removeFromCart: (state, action) => {

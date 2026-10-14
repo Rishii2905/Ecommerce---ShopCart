@@ -2,6 +2,7 @@ import * as React from 'react';
 import { styled, alpha } from '@mui/material/styles';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import ListSubheader from '@mui/material/ListSubheader';
 
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
 import { LightPurpleButton } from '../../../utils/buttonStyles';
@@ -35,12 +36,15 @@ const ProductsMenu = ({ dropName }) => {
         setAnchorEl(null);
     };
 
-    const uniqueItems = productData.filter((data, index, self) => {
-        return (dropName === "Categories" ?
-            self.findIndex((item) => item.category === data.category) === index :
-            self.findIndex((item) => item.subcategory === data.subcategory) === index
-        );
-    });
+       // category -> sorted unique subcategories
+       const grouped = productData.reduce((acc, p) => {
+        if (!p.category) return acc;
+        if (!acc[p.category]) acc[p.category] = new Set();
+        if (p.subcategory) acc[p.category].add(p.subcategory);
+        return acc;
+    }, {});
+
+    const categoryNames = Object.keys(grouped).sort();
 
     const catHandler = (key) => {
         setAnchorEl(null);
@@ -68,40 +72,31 @@ const ProductsMenu = ({ dropName }) => {
             >
                 {dropName}
             </LightPurpleButton>
-            {
-                dropName === "Categories" ?
-                    <StyledMenu
-                        id="demo-customized-menu"
-                        MenuListProps={{
-                            'aria-labelledby': 'demo-customized-button',
-                        }}
-                        anchorEl={anchorEl}
-                        open={open}
-                        onClose={handleClose}
-                    >
-                        {uniqueItems.map((data) => (
-                            <MenuItem onClick={() => { catHandler(data.category) }} key={data._id}>
-                                {data.category}
+                        <StyledMenu
+                id="demo-customized-menu"
+                MenuListProps={{ 'aria-labelledby': 'demo-customized-button' }}
+                anchorEl={anchorEl}
+                open={open}
+                onClose={handleClose}
+                PaperProps={{ style: { maxHeight: 420 } }}
+            >
+                {dropName === "Categories"
+                    ? categoryNames.map((name) => (
+                        <MenuItem key={name} onClick={() => catHandler(name)}>
+                            {name}
+                        </MenuItem>
+                    ))
+                    : categoryNames.flatMap((name) => [
+                        <ListSubheader key={`h-${name}`} sx={{ lineHeight: '32px', fontWeight: 700 }}>
+                            {name}
+                        </ListSubheader>,
+                        ...[...grouped[name]].sort().map((sub) => (
+                            <MenuItem key={`${name}-${sub}`} onClick={() => catHandler(sub)}>
+                                {sub}
                             </MenuItem>
-                        ))}
-                    </StyledMenu>
-                    :
-                    <StyledMenu
-                        id="demo-customized-menu"
-                        MenuListProps={{
-                            'aria-labelledby': 'demo-customized-button',
-                        }}
-                        anchorEl={anchorEl}
-                        open={open}
-                        onClose={handleClose}
-                    >
-                        {uniqueItems.map((data) => (
-                            <MenuItem onClick={() => { catHandler(data.subcategory) }} key={data._id}>
-                                {data.subcategory}
-                            </MenuItem>
-                        ))}
-                    </StyledMenu>
-            }
+                        )),
+                    ])}
+            </StyledMenu>
         </div>
     );
 }

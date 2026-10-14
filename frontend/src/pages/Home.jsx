@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo,useState } from 'react';
 import { Box, Container, styled } from '@mui/material';
 import Slide from './Slide';
 import Banner from './Banner';
@@ -7,6 +7,7 @@ import { getProducts } from '../redux/userHandle';
 import ProductsMenu from './customer/components/ProductsMenu';
 import { NewtonsCradle } from '@uiball/loaders';
 import { Link } from 'react-router-dom';
+import { buildHomeSections } from '../utils/homeSections';
 
 const Home = () => {
   const adURL =
@@ -17,6 +18,8 @@ const Home = () => {
   const { productData, responseProducts, error } = useSelector((state) => state.user);
 
   const [showNetworkError, setShowNetworkError] = useState(false);
+
+  const sections = useMemo(() => buildHomeSections(productData), [productData]);
 
   useEffect(() => {
     dispatch(getProducts());
@@ -72,9 +75,9 @@ const Home = () => {
             </>
           ) : (
             <>
-              <Component>
+                <Component>
                 <LeftComponent>
-                  <Slide products={productData} title="Top Selection" />
+                  <Slide products={sections.topSelection} title="Top Selection" speed={9000} />
                 </LeftComponent>
 
                 <RightComponent>
@@ -82,6 +85,10 @@ const Home = () => {
                 </RightComponent>
               </Component>
 
+              <Slide products={sections.deals} title="Deals of the Day" speed={7000} />
+              <Slide products={sections.suggested} title="Suggested Items" speed={11000} />
+              <Slide products={sections.budget} title="Under ₹2,500" speed={8000} />
+              <Slide products={sections.recommended} title="Recommended Items" speed={10000} />
               <Slide products={productData} title="Deals of the Day" />
               <Slide products={productData} title="Suggested Items" />
               <Slide products={productData} title="Discounts for You" />

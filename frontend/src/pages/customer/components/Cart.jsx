@@ -173,7 +173,7 @@ const Cart = ({ setIsCartOpen }) => {
                                 color="success"
                                 onClick={allProductsBuyingHandler}
                             >
-                                Buy All
+                                Buy
                             </Button>
                         )}
                     </StyledPaper>
@@ -182,12 +182,7 @@ const Cart = ({ setIsCartOpen }) => {
 
             {cartDetails.length > 0 && (
                 <BottomContainer>
-                    <Button
-                        variant="contained"
-                        color="success"
-                        onClick={handleScrollToBottom}>
-                        View Bill
-                    </Button>
+                   
                     <Button
                         variant="contained"
                         color="error"
@@ -279,9 +274,7 @@ const ButtonContainer = styled.div`
 
 const BottomContainer = styled.div`
   display: flex;
-  justify-content: space-between;
-  position: sticky;
-  bottom: 0;
+  justify-content: center;
   padding: 16px;
   background-color: #f8f8f8;
 `;
