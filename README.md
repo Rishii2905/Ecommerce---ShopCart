@@ -1,101 +1,69 @@
-<h1 align="center">
-    SHOPCART: Ecommerce Site
-</h1>
+# Ecommerce---Blinkit
 
-<h3 align="center">
-Seamless shopping, search and explore different product categories, add products to cart, and checkout swiftly. <br>
-Become a seller and add products, monitor sales, and gather customer feedback.
-</h3>
+https://swift-cart-store.preview.emergentagent.com/
 
-<br>
 
-[Youtube Video](https://youtu.be/i_z0HYk3IuQ?si=S04-IBq7Ny8k0FYC)
-<br><br>
-[LinkedIn](https://www.linkedin.com/in/yogndr/)
 
-# About
+https://www.rocket.new/6ac62847a4ad5c0013269b93#preview
 
-ShopCart is an ecommerce site developed using the MERN (MongoDB, Express.js, React, Node.js) stack. It offers a user-friendly and efficient shopping experience for customers, while providing sellers with essential tools to manage their products and sales.
 
-## Features
-
-- **User Registration:** ShopCart allows users to register as customers or sellers, enabling a tailored shopping experience.
-
-- **Cart System:** Customers can add products to their cart for easy checkout. The cart allows them to review and manage their selections before completing the purchase.
-
-- **Product Search:** ShopCart offers a search functionality where customers can find products by name or browse through categories such as Electronics, Clothes, Kitchen, and more.
-
-- **Reviews and Ratings:** Customers can leave reviews and ratings (out of 5) for products they've purchased, providing valuable feedback for sellers and building trust within the community.
-
-- **Seller Dashboard:** Sellers have access to a dedicated dashboard where they can manage their products, view sales data, and gain insights into their store's performance through data visualization.
-
-- **Product Management:** Sellers can add products with detailed information and set their prices. They can also check which customers have added their products to their carts.
-
-- **Order Tracking:** Sellers can monitor the products ordered by customers, helping them stay organized and fulfill orders efficiently.
-
-## Technologies Used
-
-- Frontend: React.js, Material UI, Redux Toolkit, Styled Components
-- Backend: Node.js, Express.js, JWT Token
-- Database: MongoDB
-- Data Visualization: React Apexcharts
-
-<br>
-
-# Installation
-
-```sh
-git clone https://github.com/Yogndrr/MERN-Ecommerce-Site.git
-```
-Open 2 terminals in separate windows/tabs.
-
-Terminal 1: Setting Up Backend 
-```sh
-cd backend
-npm install
-npm start
-```
-
-Create a file called .env in the backend folder.
-Inside it write this :
-
-```sh
-MONGO_URL = mongodb://127.0.0.1/ecommerce
-
-SECRET_KEY = 'secret-key'
-```
-Instead of this link write your database link.
-
-Terminal 2: Setting Up Frontend
-```sh
-cd frontend
-npm install
-npm start
-```
-Now, navigate to `localhost:3000` in your browser. 
-The Backend API will be running at `localhost:5000`.
-<br>
-# Error Solution
-
-If you encounter a network error while signing up, follow these steps to resolve it:
-
-1. Navigate to the `src > redux > userHandle.js` file.
-
-2. Add the following line after the import statements:
-
-```javascript
-const REACT_APP_BASE_URL = "http://localhost:5000";
-```
-
-3. Replace all instances of `process.env.REACT_APP_BASE_URL` with `REACT_APP_BASE_URL`.
-
-The issue arises because the `.env` file in the frontend may not work for all users, while it works for me.
-
-These steps should resolve the network error in the frontend. If the issue persists, feel free to contact me for further assistance.
-
-Don't forget to leave a star for this project if you found the solution helpful. Thank you!
-
-# Deployment
-* Render - server side
-* Vercel - client side
-
+File Structure
+quickcart/
+├── server/                              ← BACKEND (Node + Express)
+│   ├── package.json                     CHANGED  (+ firebase-admin, − bcryptjs, − jsonwebtoken)
+│   ├── .env                             CHANGED  (Atlas URI + Firebase Admin keys, no JWT_SECRET)
+│   ├── server.js
+│   ├── seed.js                          CHANGED  (no admin user creation)
+│   ├── config/
+│   │   ├── db.js                                 (connects to Atlas via MONGO_URI)
+│   │   └── firebase.js                  NEW      (initialises firebase-admin)
+│   ├── middleware/
+│   │   └── auth.js                      CHANGED  (verifies Firebase ID tokens)
+│   ├── utils/
+│   │   └── pricing.js
+│   ├── models/                          ← DATABASE SCHEMAS (stored in Atlas)
+│   │   ├── User.js                      CHANGED  (+ firebaseUid, − password)
+│   │   ├── Category.js
+│   │   ├── Product.js
+│   │   ├── Cart.js
+│   │   └── Order.js
+│   └── routes/                          ← API ENDPOINTS
+│       ├── auth.js                      CHANGED  (just /sync and /me)
+│       ├── profile.js                   CHANGED  (password route deleted)
+│       ├── categories.js
+│       ├── products.js                           (smart search version)
+│       ├── cart.js                               (with /merge)
+│       └── orders.js
+│
+└── client/                              ← FRONTEND (React + Vite)
+    ├── package.json                     CHANGED  (+ firebase)
+    ├── .env                             NEW      (VITE_FIREBASE_* keys)
+    ├── vite.config.js
+    ├── index.html
+    └── src/
+        ├── main.jsx
+        ├── App.jsx
+        ├── firebase.js                  NEW      (initialises Firebase client + auth)
+        ├── api.js                       CHANGED  (attaches Firebase token, maps error codes)
+        ├── index.css
+        ├── utils/
+        │   └── pricing.js
+        ├── context/
+        │   ├── AuthContext.jsx          CHANGED  (Firebase login/signup/logout)
+        │   └── CartContext.jsx
+        ├── components/
+        │   ├── Navbar.jsx
+        │   ├── ProductCard.jsx
+        │   ├── ProtectedRoute.jsx
+        │   ├── AuthCard.jsx                      (login/signup tabs, unchanged)
+        │   ├── AuthModal.jsx
+        │   └── Highlight.jsx
+        └── pages/
+            ├── Home.jsx
+            ├── Login.jsx
+            ├── Signup.jsx
+            ├── Cart.jsx
+            ├── Checkout.jsx
+            ├── Orders.jsx
+            ├── Profile.jsx              CHANGED  (reset-email button instead of change-password form)
+            └── AdminInventory.jsx
