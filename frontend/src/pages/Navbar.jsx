@@ -26,16 +26,17 @@ import ProductsMenu from './customer/components/ProductsMenu';
 import { updateCustomer } from '../redux/userHandle';
 
 const Navbar = () => {
-    const { currentUser, currentRole } = useSelector(state => state.user);
+    const { currentUser, currentRole, guestCart } = useSelector(state => state.user);
 
-    const totalQuantity = currentUser && currentUser.cartDetails && currentUser.cartDetails.reduce((total, item) => total + item.quantity, 0);
+    // Logged-in customers use their own cart, guests use the guest cart
+    const cartItems = currentUser ? currentUser.cartDetails : guestCart;
+    const totalQuantity = cartItems ? cartItems.reduce((total, item) => total + item.quantity, 0) : 0;
 
     const navigate = useNavigate()
     const dispatch = useDispatch();
 
     React.useEffect(() => {
         if (currentRole === "Customer") {
-            console.log(currentUser);
             dispatch(updateCustomer(currentUser, currentUser._id));
         }
     }, [currentRole, currentUser, dispatch])
@@ -262,6 +263,20 @@ const Navbar = () => {
                                     </Link>
                                 </MenuItem>
                             </Menu>
+                        </Box>
+                    }
+
+                    {/* GUEST CART */}
+
+                    {currentRole === null &&
+                        <Box sx={{ flexGrow: 0, display: 'flex' }}>
+                            <Tooltip title="Cart">
+                                <IconButton onClick={handleOpenCart} sx={{ width: "4rem", color: 'inherit', p: 0 }}>
+                                    <Badge badgeContent={totalQuantity} color="error">
+                                        <ShoppingCartIcon sx={{ fontSize: "2rem" }} />
+                                    </Badge>
+                                </IconButton>
+                            </Tooltip>
                         </Box>
                     }
 

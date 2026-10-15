@@ -85,6 +85,11 @@ const orderSchema = new mongoose.Schema(
             type: Date,
             required: true,
         },
+        paymentMethod: {
+            type: String,
+            default: "Card",
+        },
+        expectedDelivery: Date,
         productsQuantity: {
             type: Number,
             required: true,
@@ -111,6 +116,7 @@ const orderSchema = new mongoose.Schema(
             default: "Processing",
         },
         deliveredAt: Date,
+        cancelledAt: Date,
         createdAt: {
             type: Date,
             default: Date.now,

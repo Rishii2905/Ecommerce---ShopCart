@@ -36,27 +36,33 @@ const ProductsMenu = ({ dropName }) => {
         setAnchorEl(null);
     };
 
-       // category -> sorted unique subcategories
-       const grouped = productData.reduce((acc, p) => {
-        if (!p.category) return acc;
-        if (!acc[p.category]) acc[p.category] = new Set();
-        if (p.subcategory) acc[p.category].add(p.subcategory);
+    const products = Array.isArray(productData) ? productData : [];
+
+    // Unique categories, sorted
+    const categoryNames = [...new Set(products.map((p) => p.category || "Other"))].sort();
+
+    // category -> products sorted by name
+    const productsByCategory = products.reduce((acc, p) => {
+        const category = p.category || "Other";
+        (acc[category] = acc[category] || []).push(p);
         return acc;
     }, {});
 
-    const categoryNames = Object.keys(grouped).sort();
+    Object.values(productsByCategory).forEach((list) =>
+        list.sort((a, b) => String(a.productName).localeCompare(String(b.productName)))
+    );
 
-    const catHandler = (key) => {
+    const categoryHandler = (key) => {
         setAnchorEl(null);
-        if (dropName === "Categories") {
-            dispatch(getSearchedProducts("searchProductbyCategory", key));
-        }
-        else {
-            dispatch(getSearchedProducts("searchProductbySubCategory", key));
-        }
+        dispatch(getSearchedProducts("searchProductbyCategory", key));
         if (location.pathname !== "/ProductSearch") {
             navigate("/ProductSearch");
         }
+    }
+
+    const productHandler = (id) => {
+        setAnchorEl(null);
+        navigate("/product/view/" + id);
     }
 
     return (
@@ -72,7 +78,8 @@ const ProductsMenu = ({ dropName }) => {
             >
                 {dropName}
             </LightPurpleButton>
-                        <StyledMenu
+
+            <StyledMenu
                 id="demo-customized-menu"
                 MenuListProps={{ 'aria-labelledby': 'demo-customized-button' }}
                 anchorEl={anchorEl}
@@ -82,7 +89,7 @@ const ProductsMenu = ({ dropName }) => {
             >
                 {dropName === "Categories"
                     ? categoryNames.map((name) => (
-                        <MenuItem key={name} onClick={() => catHandler(name)}>
+                        <MenuItem key={name} onClick={() => categoryHandler(name)}>
                             {name}
                         </MenuItem>
                     ))
@@ -90,9 +97,9 @@ const ProductsMenu = ({ dropName }) => {
                         <ListSubheader key={`h-${name}`} sx={{ lineHeight: '32px', fontWeight: 700 }}>
                             {name}
                         </ListSubheader>,
-                        ...[...grouped[name]].sort().map((sub) => (
-                            <MenuItem key={`${name}-${sub}`} onClick={() => catHandler(sub)}>
-                                {sub}
+                        ...productsByCategory[name].map((product) => (
+                            <MenuItem key={product._id} onClick={() => productHandler(product._id)}>
+                                {product.productName}
                             </MenuItem>
                         )),
                     ])}

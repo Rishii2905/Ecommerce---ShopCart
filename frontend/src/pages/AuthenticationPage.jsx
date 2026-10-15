@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Grid, Box, Typography, Paper, Checkbox, FormControlLabel, TextField, CssBaseline, IconButton, InputAdornment, CircularProgress } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
@@ -15,6 +15,10 @@ const AuthenticationPage = ({ mode, role }) => {
 
     const dispatch = useDispatch()
     const navigate = useNavigate()
+    const location = useLocation()
+
+    // Where to go after login (set when a guest clicks Buy). Only customers get this redirect.
+    const redirectTo = (role === "Customer" && location.state && location.state.from) || '/';
 
     const { status, currentUser, response, error, currentRole } = useSelector(state => state.user);;
 
@@ -82,7 +86,7 @@ const AuthenticationPage = ({ mode, role }) => {
 
     useEffect(() => {
         if (status === 'success' && currentRole !== null) {
-            navigate('/');
+            navigate(redirectTo, { replace: true });
         }
         else if (status === 'failed') {
             setMessage(response)
@@ -94,7 +98,7 @@ const AuthenticationPage = ({ mode, role }) => {
             setMessage("Network Error")
             setShowPopup(true)
         }
-    }, [status, currentUser, currentRole, navigate, error, response]);
+    }, [status, currentUser, currentRole, navigate, error, response, redirectTo]);
 
     return (
         <>
@@ -113,6 +117,12 @@ const AuthenticationPage = ({ mode, role }) => {
                         <StyledTypography>
                             {role} {mode}
                         </StyledTypography>
+
+                        {location.state && location.state.from &&
+                            <Typography variant="body2" sx={{ mb: 2, color: "#7f56da" }}>
+                                Please log in or sign up to complete your purchase.
+                            </Typography>
+                        }
 
                         {role === "Seller" && mode === "Register" &&
                             <Typography variant="h7">
@@ -230,11 +240,11 @@ const AuthenticationPage = ({ mode, role }) => {
                                 </Grid>
                                 <Grid item sx={{ ml: 2 }}>
                                     {mode === "Register" ?
-                                        <StyledLink to={`/${role}login`}>
+                                        <StyledLink to={`/${role}login`} state={location.state}>
                                             Log in
                                         </StyledLink>
                                         :
-                                        <StyledLink to={`/${role}register`}>
+                                        <StyledLink to={`/${role}register`} state={location.state}>
                                             Sign up
                                         </StyledLink>
                                     }

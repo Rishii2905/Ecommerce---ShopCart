@@ -5,7 +5,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../redux/userSlice';
 import { BasicButton } from '../utils/buttonStyles';
 import { useNavigate } from 'react-router-dom';
-import Popup from './Popup';
 import { addStuff } from '../redux/userHandle';
 
 const Products = ({ productData }) => {
@@ -16,8 +15,6 @@ const Products = ({ productData }) => {
 
   const { currentRole, responseSearch } = useSelector(state => state.user);
   const [currentPage, setCurrentPage] = useState(1);
-  const [showPopup, setShowPopup] = useState(false);
-  const [message, setMessage] = useState("");
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -30,14 +27,7 @@ const Products = ({ productData }) => {
 
   const handleUpload = (event, product) => {
     event.stopPropagation();
-    console.log(product);
     dispatch(addStuff("ProductCreate", product));
-  };
-
-  const messageHandler = (event) => {
-    event.stopPropagation();
-    setMessage("You have to login or register first")
-    setShowPopup(true)
   };
 
   const handlePageChange = (event, value) => {
@@ -64,34 +54,20 @@ const Products = ({ productData }) => {
               <PriceCost>₹{data.price.cost}</PriceCost>
               <PriceDiscount>{data.price.discountPercent}% off</PriceDiscount>
               <AddToCart>
-                {currentRole === "Customer" &&
-                  <>
-                    <BasicButton
-                      onClick={(event) => handleAddToCart(event, data)}
-                    >
-                      Add To Cart
-                    </BasicButton>
-                  </>
+                {(currentRole === "Customer" || currentRole === null) &&
+                  <BasicButton
+                    onClick={(event) => handleAddToCart(event, data)}
+                  >
+                    Add To Cart
+                  </BasicButton>
                 }
                 {currentRole === "Shopcart" &&
-                  <>
-                    <BasicButton
-                      onClick={(event) => handleUpload(event, data)}
-                    >
-                      Upload
-                    </BasicButton>
-                  </>
+                  <BasicButton
+                    onClick={(event) => handleUpload(event, data)}
+                  >
+                    Upload
+                  </BasicButton>
                 }
-                {currentRole === null &&
-                  <>
-                    <BasicButton
-                      onClick={messageHandler}
-                    >
-                      Add To Cart
-                    </BasicButton>
-                  </>
-                }
-
               </AddToCart>
             </ProductContainer>
           </Grid>
@@ -106,8 +82,6 @@ const Products = ({ productData }) => {
           color="secondary"
         />
       </Container>
-
-      <Popup message={message} setShowPopup={setShowPopup} showPopup={showPopup} />
     </>
   )
 };

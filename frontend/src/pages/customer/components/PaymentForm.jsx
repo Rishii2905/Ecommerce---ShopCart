@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
-import { Box, Button } from '@mui/material';
+import { Alert, Box, Button, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { addStuff } from '../../../redux/userHandle';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -18,6 +18,9 @@ const PaymentForm = ({ handleBack }) => {
 
     const params = useParams();
     const productID = params.id;
+
+    const [paymentMethod, setPaymentMethod] = useState("Card");
+    const isCOD = paymentMethod === "Cash on Delivery";
 
     const [paymentData, setPaymentData] = useState({
         cardName: '',
@@ -43,41 +46,57 @@ const PaymentForm = ({ handleBack }) => {
         }
     }, [productID, dispatch]);
 
-    const productsQuantity = currentUser.cartDetails.reduce((total, item) => total + item.quantity, 0);
-    const totalPrice = currentUser.cartDetails.reduce((total, item) => total + (item.quantity * item.price.cost), 0);
+    // Ignore any cart item that has no price
+    const cartItems = (currentUser.cartDetails || []).filter((item) => item && item.price);
 
-    const singleProductQuantity = productDetailsCart && productDetailsCart.quantity
-    const totalsingleProductPrice = productDetailsCart && productDetailsCart.price && productDetailsCart.price.cost * productDetailsCart.quantity
+    const productsQuantity = cartItems.reduce((total, item) => total + item.quantity, 0);
+    const totalPrice = cartItems.reduce((total, item) => total + (item.quantity * item.price.cost), 0);
 
-    const paymentID = `${paymentData.cardNumber.slice(-4)}-${paymentData.expDate.slice(0, 2)}${paymentData.expDate.slice(-2)}-${Date.now()}`;
-    const paymentInfo = { id: paymentID, status: "Successful" }
+    const singleProduct = productID && productDetailsCart && productDetailsCart.price ? productDetailsCart : null;
+    const singleProductQuantity = singleProduct ? singleProduct.quantity : 0;
+    const totalsingleProductPrice = singleProduct ? singleProduct.price.cost * singleProduct.quantity : 0;
 
-    const multiOrderData = {
-        buyer: currentUser._id,
-        shippingData: currentUser.shippingData,
-        orderedProducts: currentUser.cartDetails,
-        paymentInfo,
-        productsQuantity,
-        totalPrice,
-    }
-
-    const singleOrderData = {
-        buyer: currentUser._id,
-        shippingData: currentUser.shippingData,
-        orderedProducts: productDetailsCart,
-        paymentInfo,
-        productsQuantity: singleProductQuantity,
-        totalPrice: totalsingleProductPrice,
-    }
+    const amountToPay = productID ? totalsingleProductPrice : totalPrice;
+    const nothingToOrder = productID ? !singleProduct : cartItems.length === 0;
 
     const handleSubmit = (e) => {
         e.preventDefault()
+
+        if (nothingToOrder) {
+            setMessage("Your cart is empty")
+            setShowPopup(true)
+            return
+        }
+
+        const paymentInfo = isCOD
+            ? { id: `COD-${Date.now()}`, status: "Pending" }
+            : {
+                id: `${paymentData.cardNumber.slice(-4)}-${paymentData.expDate.slice(0, 2)}${paymentData.expDate.slice(-2)}-${Date.now()}`,
+                status: "Successful"
+            };
+
         if (productID) {
-            dispatch(addStuff("newOrder", singleOrderData));
+            dispatch(addStuff("newOrder", {
+                buyer: currentUser._id,
+                shippingData: currentUser.shippingData,
+                orderedProducts: [singleProduct],
+                paymentInfo,
+                paymentMethod,
+                productsQuantity: singleProductQuantity,
+                totalPrice: totalsingleProductPrice,
+            }));
             dispatch(removeSpecificProduct(productID));
         }
         else {
-            dispatch(addStuff("newOrder", multiOrderData));
+            dispatch(addStuff("newOrder", {
+                buyer: currentUser._id,
+                shippingData: currentUser.shippingData,
+                orderedProducts: cartItems,
+                paymentInfo,
+                paymentMethod,
+                productsQuantity,
+                totalPrice,
+            }));
             dispatch(removeAllFromCart());
         }
     };
@@ -101,61 +120,81 @@ const PaymentForm = ({ handleBack }) => {
             <Typography variant="h6" gutterBottom>
                 Payment method
             </Typography>
+
+            <FormControl sx={{ mb: 3 }}>
+                <FormLabel id="payment-method-label">Choose how you want to pay</FormLabel>
+                <RadioGroup
+                    row
+                    aria-labelledby="payment-method-label"
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                >
+                    <FormControlLabel value="Card" control={<Radio />} label="Credit / Debit Card" />
+                    <FormControlLabel value="Cash on Delivery" control={<Radio />} label="Cash on Delivery" />
+                </RadioGroup>
+            </FormControl>
+
             <form onSubmit={handleSubmit}>
-                <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
-                        <TextField
-                            required
-                            id="cardName"
-                            label="Name on card"
-                            fullWidth
-                            autoComplete="cc-name"
-                            variant="standard"
-                            value={paymentData.cardName}
-                            onChange={handleInputChange}
-                        />
+                {isCOD ?
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                        Pay ₹{amountToPay} in cash when your order is delivered. No online payment needed.
+                    </Alert>
+                    :
+                    <Grid container spacing={3}>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                required
+                                id="cardName"
+                                label="Name on card"
+                                fullWidth
+                                autoComplete="cc-name"
+                                variant="standard"
+                                value={paymentData.cardName}
+                                onChange={handleInputChange}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                required
+                                id="cardNumber"
+                                label="Card number"
+                                type='number'
+                                fullWidth
+                                autoComplete="cc-number"
+                                variant="standard"
+                                value={paymentData.cardNumber}
+                                onChange={handleInputChange}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                required
+                                id="expDate"
+                                type='date'
+                                helperText="Expiry date"
+                                fullWidth
+                                autoComplete="cc-exp"
+                                variant="standard"
+                                value={paymentData.expDate}
+                                onChange={handleInputChange}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                required
+                                id="cvv"
+                                label="CVV"
+                                type='number'
+                                helperText="Last three digits on signature strip"
+                                fullWidth
+                                autoComplete="cc-csc"
+                                variant="standard"
+                                value={paymentData.cvv}
+                                onChange={handleInputChange}
+                            />
+                        </Grid>
                     </Grid>
-                    <Grid item xs={12} md={6}>
-                        <TextField
-                            required
-                            id="cardNumber"
-                            label="Card number"
-                            type='number'
-                            fullWidth
-                            autoComplete="cc-number"
-                            variant="standard"
-                            value={paymentData.cardNumber}
-                            onChange={handleInputChange}
-                        />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <TextField
-                            required
-                            id="expDate"
-                            type='date'
-                            helperText="Expiry date"
-                            fullWidth
-                            autoComplete="cc-exp"
-                            variant="standard"
-                            value={paymentData.expDate}
-                            onChange={handleInputChange}
-                        />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <TextField
-                            required
-                            id="cvv"
-                            label="CVV"
-                            type='number'
-                            helperText="Last three digits on signature strip"
-                            fullWidth
-                            autoComplete="cc-csc"
-                            variant="standard"
-                            value={paymentData.cvv}
-                            onChange={handleInputChange}
-                        />
-                    </Grid>
-                </Grid>
+                }
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <Button onClick={handleBack} sx={{ mt: 3, ml: 1 }}>
                         Back
@@ -163,9 +202,10 @@ const PaymentForm = ({ handleBack }) => {
                     <Button
                         variant="contained"
                         type='submit'
+                        disabled={nothingToOrder}
                         sx={{ mt: 3, ml: 1 }}
                     >
-                        Place order
+                        {isCOD ? "Place order (COD)" : "Place order"}
                     </Button>
                 </Box>
             </form>

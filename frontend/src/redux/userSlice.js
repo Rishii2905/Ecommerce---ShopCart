@@ -1,12 +1,28 @@
 import { createSlice } from '@reduxjs/toolkit';
 import jwtDecode from 'jwt-decode';
 
+const safeParse = (key) => {
+    try {
+        return JSON.parse(localStorage.getItem(key));
+    } catch (e) {
+        return null;
+    }
+};
+
+// Drop broken cart entries (for example items saved without a price)
+const cleanCart = (cart) => (Array.isArray(cart) ? cart.filter((item) => item && item.price) : []);
+
+const storedUser = safeParse('user');
+if (storedUser && storedUser.role === "Customer") {
+    storedUser.cartDetails = cleanCart(storedUser.cartDetails);
+}
+
 const initialState = {
     status: 'idle',
     loading: false,
-    currentUser: JSON.parse(localStorage.getItem('user')) || null,
-    currentRole: (JSON.parse(localStorage.getItem('user')) || {}).role || null,
-    currentToken: (JSON.parse(localStorage.getItem('user')) || {}).token || null,
+    currentUser: storedUser || null,
+    currentRole: (storedUser || {}).role || null,
+    currentToken: (storedUser || {}).token || null,
     isLoggedIn: false,
     error: null,
     response: null,
@@ -26,21 +42,43 @@ const initialState = {
     productDetailsCart: {},
     filteredProducts: [],
     customersList: [],
+    guestCart: cleanCart(safeParse('guestCart')),
 };
 
 const updateCartDetailsInLocalStorage = (cartDetails) => {
-    const currentUser = JSON.parse(localStorage.getItem('user')) || {};
+    const currentUser = safeParse('user') || {};
     currentUser.cartDetails = cartDetails;
     localStorage.setItem('user', JSON.stringify(currentUser));
 };
 
 export const updateShippingDataInLocalStorage = (shippingData) => {
-    const currentUser = JSON.parse(localStorage.getItem('user')) || {};
+    const currentUser = safeParse('user') || {};
     const updatedUser = {
         ...currentUser,
         shippingData: shippingData
     };
     localStorage.setItem('user', JSON.stringify(updatedUser));
+};
+
+// Logged-in customers use their own cart, guests use guestCart
+const getCart = (state) => {
+    if (state.currentUser) {
+        if (!Array.isArray(state.currentUser.cartDetails)) {
+            state.currentUser.cartDetails = [];
+        }
+        return state.currentUser.cartDetails;
+    }
+    return state.guestCart;
+};
+
+const saveCart = (state) => {
+    if (state.currentUser) {
+        updateCartDetailsInLocalStorage(state.currentUser.cartDetails);
+    } else {
+        try {
+            localStorage.setItem('guestCart', JSON.stringify(state.guestCart));
+        } catch (e) { /* ignore */ }
+    }
 };
 
 const userSlice = createSlice({
@@ -74,76 +112,88 @@ const userSlice = createSlice({
             localStorage.setItem('user', JSON.stringify(action.payload));
         },
         authSuccess: (state, action) => {
-            localStorage.setItem('user', JSON.stringify(action.payload));
-            state.currentUser = action.payload;
-            state.currentRole = action.payload.role;
-            state.currentToken = action.payload.token;
+            const user = JSON.parse(JSON.stringify(action.payload));
+
+            if (user.role === "Customer") {
+                user.cartDetails = cleanCart(user.cartDetails);
+
+                // Merge the guest cart into the customer's cart on login/signup
+                if (state.guestCart.length > 0) {
+                    const guestItems = JSON.parse(JSON.stringify(state.guestCart));
+
+                    guestItems.forEach((item) => {
+                        const existing = user.cartDetails.find((c) => c._id === item._id);
+                        if (existing) {
+                            existing.quantity += item.quantity;
+                        } else {
+                            user.cartDetails.push(item);
+                        }
+                    });
+
+                    state.guestCart = [];
+                    localStorage.removeItem('guestCart');
+                }
+            }
+
+            localStorage.setItem('user', JSON.stringify(user));
+            state.currentUser = user;
+            state.currentRole = user.role;
+            state.currentToken = user.token;
             state.status = 'success';
             state.response = null;
             state.error = null;
             state.isLoggedIn = true;
         },
         addToCart: (state, action) => {
-            const existingProduct = state.currentUser.cartDetails.find(
-                (cartItem) => cartItem._id === action.payload._id
-            );
-        
+            // Never add a product that has no price
+            if (!action.payload || !action.payload.price) return;
+
+            const cart = getCart(state);
+            const existingProduct = cart.find((item) => item._id === action.payload._id);
+
             if (existingProduct) {
                 existingProduct.quantity += 1;
             } else {
-                const newCartItem = { ...action.payload, quantity: 1 };
-                state.currentUser.cartDetails.push(newCartItem);
+                cart.push({ ...action.payload, quantity: 1 });
             }
-        
-            updateCartDetailsInLocalStorage(state.currentUser.cartDetails);
+            saveCart(state);
         },
         removeFromCart: (state, action) => {
-            const existingProduct = state.currentUser.cartDetails.find(
-                (cartItem) => cartItem._id === action.payload._id
-            );
+            const cart = getCart(state);
+            const index = cart.findIndex((item) => item._id === action.payload._id);
 
-            if (existingProduct) {
-                if (existingProduct.quantity > 1) {
-                    existingProduct.quantity -= 1;
+            if (index !== -1) {
+                if (cart[index].quantity > 1) {
+                    cart[index].quantity -= 1;
                 } else {
-                    const index = state.currentUser.cartDetails.findIndex(
-                        (cartItem) => cartItem._id === action.payload._id
-                    );
-                    if (index !== -1) {
-                        state.currentUser.cartDetails.splice(index, 1);
-                    }
+                    cart.splice(index, 1);
                 }
             }
-
-            updateCartDetailsInLocalStorage(state.currentUser.cartDetails);
+            saveCart(state);
         },
 
         removeSpecificProduct: (state, action) => {
-            const productIdToRemove = action.payload;
-            const updatedCartDetails = state.currentUser.cartDetails.filter(
-                (cartItem) => cartItem._id !== productIdToRemove
-            );
-
-            state.currentUser.cartDetails = updatedCartDetails;
-            updateCartDetailsInLocalStorage(updatedCartDetails);
+            const remaining = getCart(state).filter((item) => item._id !== action.payload);
+            if (state.currentUser) {
+                state.currentUser.cartDetails = remaining;
+            } else {
+                state.guestCart = remaining;
+            }
+            saveCart(state);
         },
 
         fetchProductDetailsFromCart: (state, action) => {
-            const productIdToFetch = action.payload;
-            const productInCart = state.currentUser.cartDetails.find(
-                (cartItem) => cartItem._id === productIdToFetch
-            );
-
-            if (productInCart) {
-                state.productDetailsCart = { ...productInCart };
-            } else {
-                state.productDetailsCart = null;
-            }
+            const productInCart = getCart(state).find((item) => item._id === action.payload);
+            state.productDetailsCart = productInCart ? { ...productInCart } : null;
         },
 
         removeAllFromCart: (state) => {
-            state.currentUser.cartDetails = [];
-            updateCartDetailsInLocalStorage([]);
+            if (state.currentUser) {
+                state.currentUser.cartDetails = [];
+            } else {
+                state.guestCart = [];
+            }
+            saveCart(state);
         },
 
         authFailed: (state, action) => {
@@ -169,9 +219,18 @@ const userSlice = createSlice({
         },
 
         isTokenValid: (state) => {
-            const decodedToken = jwtDecode(state.currentToken);
+            let valid = false;
 
-            if (state.currentToken && decodedToken.exp * 1000 > Date.now()) {
+            try {
+                if (state.currentToken) {
+                    const decodedToken = jwtDecode(state.currentToken);
+                    valid = decodedToken.exp * 1000 > Date.now();
+                }
+            } catch (e) {
+                valid = false;
+            }
+
+            if (valid) {
                 state.isLoggedIn = true;
             } else {
                 localStorage.removeItem('user');

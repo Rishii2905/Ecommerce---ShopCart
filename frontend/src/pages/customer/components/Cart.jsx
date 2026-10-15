@@ -16,9 +16,12 @@ const Cart = ({ setIsCartOpen }) => {
 
     const navigate = useNavigate();
 
-    const { currentUser } = useSelector((state) => state.user);
+    const { currentUser, guestCart } = useSelector((state) => state.user);
 
-    let cartDetails = currentUser.cartDetails;
+    // Logged-in customers use their own cart, guests use the guest cart.
+    // Items without a price are ignored so a bad entry can never crash the cart.
+    const cartDetails = ((currentUser ? currentUser.cartDetails : guestCart) || [])
+        .filter((item) => item && item.price);
 
     const handleRemoveFromCart = (product) => {
         dispatch(removeFromCart(product));
@@ -41,27 +44,30 @@ const Cart = ({ setIsCartOpen }) => {
         setIsCartOpen(false)
     }
 
+    // Guests are sent to login first and returned to checkout afterwards
     const productBuyingHandler = (id) => {
-        console.log(currentUser);
-        dispatch(updateCustomer(currentUser, currentUser._id));
         setIsCartOpen(false)
+
+        if (!currentUser) {
+            navigate("/Customerlogin", { state: { from: `/product/buy/${id}` } })
+            return
+        }
+
+        dispatch(updateCustomer(currentUser, currentUser._id));
         navigate(`/product/buy/${id}`)
     }
 
     const allProductsBuyingHandler = () => {
-        console.log(currentUser);
-        dispatch(updateCustomer(currentUser, currentUser._id));
         setIsCartOpen(false)
+
+        if (!currentUser) {
+            navigate("/Customerlogin", { state: { from: "/Checkout" } })
+            return
+        }
+
+        dispatch(updateCustomer(currentUser, currentUser._id));
         navigate("/Checkout")
     }
-
-    const priceContainerRef = useRef(null);
-
-    const handleScrollToBottom = () => {
-        if (priceContainerRef.current) {
-            priceContainerRef.current.scrollIntoView({ behavior: 'smooth' });
-        }
-    };
 
     const firstCartItemRef = useRef(null);
 
@@ -70,6 +76,7 @@ const Cart = ({ setIsCartOpen }) => {
             firstCartItemRef.current.scrollIntoView({ behavior: 'smooth' });
         }
     };
+
     return (
         <StyledContainer>
             <TopContainer>
@@ -94,7 +101,7 @@ const Cart = ({ setIsCartOpen }) => {
                     {cartDetails.map((data, index) => (
                         <Grid
                             item xs={12}
-                            key={index}
+                            key={data._id || index}
                             ref={index === 0 ? firstCartItemRef : null}
                         >
                             <CartItem>
@@ -154,7 +161,7 @@ const Cart = ({ setIsCartOpen }) => {
                             </CartItem>
                         </Grid>
                     ))}
-                    <StyledPaper ref={priceContainerRef}>
+                    <StyledPaper>
                         <Title>
                             PRICE DETAILS
                         </Title>
@@ -167,22 +174,19 @@ const Cart = ({ setIsCartOpen }) => {
                             Total Amount = ₹{totalNewPrice}
                         </DetailsContainer>
                         <Divider sx={{ my: 1, mb: 4 }} />
-                        {cartDetails.length > 0 && (
-                            <Button
-                                variant="contained"
-                                color="success"
-                                onClick={allProductsBuyingHandler}
-                            >
-                                Buy
-                            </Button>
-                        )}
+                        <Button
+                            variant="contained"
+                            color="success"
+                            onClick={allProductsBuyingHandler}
+                        >
+                            Buy All
+                        </Button>
                     </StyledPaper>
                 </CardGrid>
             )}
 
             {cartDetails.length > 0 && (
                 <BottomContainer>
-                   
                     <Button
                         variant="contained"
                         color="error"
@@ -223,7 +227,7 @@ const StyledPaper = styled(Paper)`
   display: flex;
   margin-top: 2rem;
   flex-direction: column;
-  height: 30vh;
+  min-height: 30vh;
 `;
 
 const CardGrid = styled(Grid)`

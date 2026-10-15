@@ -1,27 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { addToCart,removeFromCart } from '../redux/userSlice';
+import { addToCart, removeFromCart } from '../redux/userSlice';
 import styled from 'styled-components';
 import { BasicButton } from '../utils/buttonStyles';
 import { getProductDetails, updateStuff } from '../redux/userHandle';
-import { Avatar, Button,Card, IconButton, Menu, MenuItem, Typography } from '@mui/material';
+import { Avatar, Button, Card, IconButton, Menu, MenuItem, Typography } from '@mui/material';
 import { generateRandomColor, timeAgo } from '../utils/helperFunctions';
 import { MoreVert } from '@mui/icons-material';
-
 
 const ViewProduct = () => {
     const dispatch = useDispatch();
     const params = useParams();
     const productID = params.id;
 
-
-    const { currentUser, currentRole, productDetails, loading, responseDetails } = useSelector(state => state.user);
+    const { currentUser, currentRole, productDetails, loading, responseDetails, guestCart } = useSelector(state => state.user);
 
     useEffect(() => {
         dispatch(getProductDetails(productID));
     }, [productID, dispatch]);
-
 
     const [anchorElMenu, setAnchorElMenu] = useState(null);
 
@@ -40,8 +37,10 @@ const ViewProduct = () => {
     };
 
     const reviewer = currentUser && currentUser._id
-    const cartItem = currentUser && currentUser.cartDetails &&
-    currentUser.cartDetails.find((item) => item._id === productID);
+
+    // Logged-in customers use their own cart, guests use the guest cart
+    const cartItems = currentUser ? currentUser.cartDetails : guestCart;
+    const cartItem = cartItems && cartItems.find((item) => item._id === productID);
 
     return (
         <>
@@ -72,33 +71,34 @@ const ViewProduct = () => {
                                 </ProductContainer>
 
                                 {
-    currentRole === "Customer" &&
-    <ButtonContainer>
-        {cartItem ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={() => dispatch(removeFromCart(productDetails))}
-                >
-                    -1
-                </Button>
-                <Typography variant="h6">{cartItem.quantity}</Typography>
-                <Button
-                    variant="outlined"
-                    color="success"
-                    onClick={() => dispatch(addToCart(productDetails))}
-                >
-                    +1
-                </Button>
-            </div>
-        ) : (
-            <BasicButton onClick={() => dispatch(addToCart(productDetails))}>
-                Add to Cart
-            </BasicButton>
-        )}
-    </ButtonContainer>
-}
+                                    (currentRole === "Customer" || currentRole === null) &&
+                                    <ButtonContainer>
+                                        {cartItem ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                                                <Button
+                                                    variant="outlined"
+                                                    color="error"
+                                                    onClick={() => dispatch(removeFromCart(productDetails))}
+                                                >
+                                                    -1
+                                                </Button>
+                                                <Typography variant="h6">{cartItem.quantity}</Typography>
+                                                <Button
+                                                    variant="outlined"
+                                                    color="success"
+                                                    onClick={() => dispatch(addToCart(productDetails))}
+                                                >
+                                                    +1
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <BasicButton onClick={() => dispatch(addToCart(productDetails))}>
+                                                Add to Cart
+                                            </BasicButton>
+                                        )}
+                                    </ButtonContainer>
+                                }
+
                                 <ReviewWritingContainer>
                                     <Typography variant="h4">Reviews</Typography>
                                 </ReviewWritingContainer>
@@ -190,7 +190,6 @@ const ProductContainer = styled.div`
 
 const ProductImage = styled.img`
     max-width: 300px;
-    /* width: 50%; */
     margin-bottom: 20px;
 `;
 
