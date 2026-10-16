@@ -100,16 +100,29 @@ const addReview = async (req, res) => {
     }
 };
 
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const searchProduct = async (req, res) => {
     try {
-        const key = req.params.key;
+        const tokens = String(req.params.key || '')
+            .toLowerCase()
+            .split(/\s+/)
+            .map((t) => t.replace(/[^a-z0-9]/g, ''))
+            .filter(Boolean);
 
-        let products = await Product.find({
-            $or: [
-                { productName: { $regex: key, $options: 'i' } },
-                { category: { $regex: key, $options: 'i' } },
-                { subcategory: { $regex: key, $options: 'i' } }
-            ]
+        if (tokens.length === 0) {
+            return res.send({ message: "No products found" });
+        }
+
+        // "tshirt" -> t[\s-]?s[\s-]?h[\s-]?i[\s-]?r[\s-]?t
+        const patterns = tokens.map((t) => t.split('').map(escapeRegex).join('[\\s-]?'));
+
+        const fields = ['productName', 'category', 'subcategory', 'tagline'];
+
+        const products = await Product.find({
+            $and: patterns.map((pattern) => ({
+                $or: fields.map((field) => ({ [field]: { $regex: pattern, $options: 'i' } }))
+            }))
         }).populate("seller", "shopName");
 
         if (products.length > 0) {
